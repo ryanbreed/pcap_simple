@@ -1,6 +1,5 @@
 # rcov generated
 coverage
-.idea/
 # rdoc generated
 rdoc
 
@@ -40,3 +39,5 @@ pkg
 #
 # For vim:
 #*.swp
+.idea/
+Gemfile.lock
