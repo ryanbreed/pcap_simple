@@ -1,6 +1,6 @@
 = pcap_simple
 
-Description goes here.
+Basic pcap file reader. API is gawky.
 
 == Contributing to pcap_simple
  
