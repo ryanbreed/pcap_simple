@@ -18,7 +18,10 @@ module PcapSimple
       raise ArgumentError, "need to specify file_name" if file_name.nil?
       @file=File.open(file_name,"r")
       @header=PcapHeader.new(file.read(PCAP_HEADER_LEN))
+      yield self if block_given?
     end
+    alias :new :open
+    
     def each(&block)
       file.seek(PCAP_HEADER_LEN)
       loop do
