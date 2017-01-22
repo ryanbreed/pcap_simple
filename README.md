@@ -14,6 +14,6 @@ Basic pcap file reader. API is gawky.
 
 == Copyright
 
-Copyright (c) 2011 Ryan Breed. See LICENSE.txt for
+Copyright (c) 2017 Ryan Breed. See LICENSE.txt for
 further details.
 
