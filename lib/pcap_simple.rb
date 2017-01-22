@@ -1,77 +1,53 @@
-# DATE: Feb 9, 2011
-# CREATED BY RYAN BREED
-#
-require 'rubygems'
 require 'bit-struct'
+require 'pcap_simple/version'
 
 module PcapSimple
   PCAP_HEADER_LEN=   ((5*32 + 2*16)/8)
   PACKET_HEADER_LEN= ((4*32)/8)
-  VERSION=File.read(File.join(File.expand_path(File.dirname(__FILE__)),'..','VERSION'))
 
   class PcapFile
     attr_accessor :file_name
-    attr_reader   :file, :header
+    attr_reader   :header
     include Enumerable
     def initialize(*args)
       Hash[*args].each {|k,v| self.send("%s="%k,v)}
       raise ArgumentError, "need to specify file_name" if file_name.nil?
-      @file=File.open(file_name,"r")
-      @header=PcapHeader.new(file.read(PCAP_HEADER_LEN))
+      header_raw=File.read(file_name, PCAP_HEADER_LEN)
+      @header=PcapHeader.new(header_raw)
       yield self if block_given?
     end
-    alias :new :open
-    
-    def each(&block)
-      file.seek(PCAP_HEADER_LEN)
-      loop do
-        header_data=file.read(PACKET_HEADER_LEN)
-        break if (header_data.nil? || header_data.length < PACKET_HEADER_LEN)
-        header=PcapRecord.new(header_data)
-        raw=file.read(header.incl_len)
-        break if (raw.nil? || raw.length < header.incl_len)
-        packet=Packet.new(:raw_data=>raw,:header=>header)
 
-        yield packet unless packet.datagram.nil?
+    def each(&block)
+      File.open(file_name,"r") do |file|
+        file.seek(PCAP_HEADER_LEN)
+        loop do
+          header_data=file.read(PACKET_HEADER_LEN)
+          break if (header_data.nil? || header_data.length < PACKET_HEADER_LEN)
+          header=PcapRecord.new(header_data)
+          raw=file.read(header.incl_len)
+          break if (raw.nil? || raw.length < header.incl_len)
+          packet=Packet.new(:raw_data=>raw,:header=>header)
+
+          yield packet
+        end
       end
     end
   end
   class Packet
     attr_accessor :raw_data, :header
-    attr_reader   :ethernet, :ip, :datagram
-    
+    attr_reader   :ethernet, :ip
+
     def initialize(*args)
       Hash[*args].each {|k,v| self.send("%s="%k,v)}
       raise ArgumentError, "need to specify raw_data" if raw_data.nil?
       @ethernet=Ethernet.new(raw_data)
       @ip      =IP.new(@ethernet.data)
-      case ip.ip_p
-        when 17
-          @datagram=UDP.new(ip.data)
-      end
-    end
-    def udp_data
-      datagram.data
-    end
-    def src
-      ip.ip_src
-    end
-    def dst
-      ip.ip_dst
-    end
-    def ip_id
-      ip.ip_id
-    end
-    def sport
-      datagram.sport
-    end
-    def dport
-      datagram.dport
     end
     def time
       Time.at(header.ts_sec)
     end
   end
+
   class PcapHeader < BitStruct
     default_options :endian=>:native
     unsigned  :magic_number,  32, "Magic Number"
@@ -92,9 +68,9 @@ module PcapSimple
   end
 
   class Ethernet < BitStruct
-    hex_octets :mac_dst,  48,     "Source MAC"
-    hex_octets :mac_src,  48,     "Destination MAC"
-    unsigned   :ethertype,16,     "Ethertype or length"
+    hex_octets :enet_dst,  48,     "Source MAC"
+    hex_octets :enet_src,  48,     "Destination MAC"
+    unsigned   :enet_type, 16,     "Ethertype or length"
     rest       :data
   end
 
@@ -119,10 +95,10 @@ module PcapSimple
   end
 
   class UDP < BitStruct
-    unsigned    :sport,   16,     "Source Port"
-    unsigned    :dport,   16,     "Destination Port"
-    unsigned    :length,  16,     "Datagram Length"
-    unsigned    :checksum,16,     "Datagram Checksum"
+    unsigned    :udp_src,    16,     "Source Port"
+    unsigned    :udp_dst,    16,     "Destination Port"
+    unsigned    :udp_len,    16,     "Datagram Length"
+    unsigned    :udp_chksum, 16,     "Datagram Checksum"
     rest        :data,            "UDP Data"
   end
 
